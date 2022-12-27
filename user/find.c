@@ -11,7 +11,6 @@ void checkname(char *path,char *filename) {
     p++;
     memset(buf,0,sizeof(buf));
     memmove(buf,p,strlen(p));
-    //printf("checkname: %s %s %s\n",path,filename,buf);
     if (0 == strcmp(filename,buf)) {
         printf("%s\n",path);
     }

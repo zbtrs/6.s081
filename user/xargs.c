@@ -25,7 +25,6 @@ int main(int argc,char *argv[]) {
         }
         cur = ncur + 1;
         childargv[argc - 1] = newargv;
-        childargv[argc] = 0;
         if (fork() == 0) {
             exec(childargv[0],childargv);
             printf("cannot exec %s\n",childargv[0]);
