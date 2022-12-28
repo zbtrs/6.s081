@@ -19,6 +19,7 @@ main(int argc, char *argv[])
     exit(1);
   }
   
+  
   for(i = 2; i < argc && i < MAXARG; i++){
     nargv[i-2] = argv[i];
   }

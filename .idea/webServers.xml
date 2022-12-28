@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="011d05b1-5a05-401e-b0a0-4e6ef1ce8813" name="zbtrs">
+        <fileTransfer rootFolder="/home/zbtrs" accessType="SFTP" host="192.168.184.128" port="22" sshConfigId="e154759f-733f-4c79-88cd-37490ed60116" sshConfig="zbtrs@192.168.184.128:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
