@@ -34,13 +34,15 @@ procinit(void)
       // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
       // guard page.
+      /*
       char *pa = kalloc();
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
-      printf("ying she wan cheng: procinit %p %p\n",va,(uint64)pa);
+      */
+      //printf("ying she wan cheng: procinit %p %p\n",va,(uint64)pa);
   }
   kvminithart();
 }
@@ -123,15 +125,29 @@ found:
   }
   // alloc a pagetable of process in kernel
   p->kernel_pagetable = kpvminit();
+  char *pa = kalloc();
+  if (pa == 0) {
+    panic("kalloc");
+  }
+  uint64 va = KSTACK((int) (p - proc));
+  kpvmmap(p->kernel_pagetable,va,(uint64)pa,PGSIZE,PTE_R | PTE_W);
+  p->kstack = va;
+  /*
+      char *pa = kalloc();
+      if(pa == 0)
+        panic("kalloc");
+      uint64 va = KSTACK((int) (p - proc));
+      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      p->kstack = va;
+  */
+ /*
   uint64 va = p->kstack;
   uint64 pa = kwalkaddr(va);
-  printf("allocproc %p %p\n",va,pa);
-  //kvmprint();
   if (pa == 0) {
     panic("allocprocess");
   }
   kpvmmap(p->kernel_pagetable,va,pa,PGSIZE,PTE_R | PTE_W);
-
+  */
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
