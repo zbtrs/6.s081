@@ -40,6 +40,7 @@ procinit(void)
       uint64 va = KSTACK((int) (p - proc));
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
+      printf("ying she wan cheng: procinit %p %p\n",va,(uint64)pa);
   }
   kvminithart();
 }
@@ -123,7 +124,9 @@ found:
   // alloc a pagetable of process in kernel
   p->kernel_pagetable = kpvminit();
   uint64 va = p->kstack;
-  uint64 pa = walkaddr(p->kernel_pagetable,va);
+  uint64 pa = kwalkaddr(va);
+  printf("allocproc %p %p\n",va,pa);
+  //kvmprint();
   if (pa == 0) {
     panic("allocprocess");
   }

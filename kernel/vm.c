@@ -127,6 +127,25 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 // Look up a virtual address, return the physical address,
 // or 0 if not mapped.
 // Can only be used to look up user pages.
+
+uint64
+kwalkaddr(uint64 va) {
+  pte_t *pte;
+  uint64 pa;
+  
+  if (va >= MAXVA) {
+    return 0;
+  }
+
+  pte = walk(kernel_pagetable,va,0);
+  if(pte == 0)
+    return 0;
+  if((*pte & PTE_V) == 0)
+    return 0;
+  pa = PTE2PA(*pte);
+  return pa;
+}
+
 uint64
 walkaddr(pagetable_t pagetable, uint64 va)
 {
@@ -372,6 +391,10 @@ vmprint(pagetable_t pagetable, int depth)
       vmprint((pagetable_t)child,depth + 1);
     }
   }
+}
+
+void kvmprint() {
+  vmprint(kernel_pagetable, 1);
 }
 
 // Free user memory pages,
