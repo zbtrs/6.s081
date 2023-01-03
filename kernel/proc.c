@@ -120,6 +120,14 @@ found:
     release(&p->lock);
     return 0;
   }
+  // alloc a pagetable of process in kernel
+  p->kernel_pagetable = kpvminit();
+  uint64 va = p->kstack;
+  uint64 pa = walkaddr(p->kernel_pagetable,va);
+  if (pa == 0) {
+    panic("allocprocess");
+  }
+  kpvmmap(p->kernel_pagetable,va,pa,PGSIZE,PTE_R | PTE_W);
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -142,6 +150,9 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  if(p->kernel_pagetable) {
+    kpwalkfree(p->kernel_pagetable,1);
+  }
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -473,6 +484,8 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        kpvminithart(p->kernel_pagetable);
+
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -485,6 +498,7 @@ scheduler(void)
     }
 #if !defined (LAB_FS)
     if(found == 0) {
+      kvminithart();
       intr_on();
       asm volatile("wfi");
     }
