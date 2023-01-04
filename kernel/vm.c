@@ -5,6 +5,7 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+//#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -115,6 +116,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     if(*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
+
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
       memset(pagetable, 0, PGSIZE);
@@ -186,13 +188,13 @@ void kpvmmap(pagetable_t pagetable,uint64 va, uint64 pa, uint64 sz, int perm) {
 // addresses on the stack.
 // assumes va is page aligned.
 uint64
-kvmpa(uint64 va)
+kvmpa(pagetable_t pagetable, uint64 va)
 {
   uint64 off = va % PGSIZE;
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(kernel_pagetable, va, 0);
+  pte = walk(pagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -350,14 +352,24 @@ freewalk(pagetable_t pagetable)
 }
 
 void kpwalkfree(pagetable_t pagetable, int depth) {
+  /*
   if (depth > 3) {
     return;
   }
+  */
   for (int i = 0; i < 512; i++) {
     pte_t pte = pagetable[i];
     if ((pte & PTE_V)) {
+      /*
       uint64 child = PTE2PA(pte);
       kpwalkfree((pagetable_t)child, depth + 1);
+      pagetable[i] = 0;
+      */
+      pagetable[i] = 0;
+      if ((pte & (PTE_R | PTE_W | PTE_X)) == 0) {
+        uint64 child = PTE2PA(pte);
+        kpwalkfree((pagetable_t)child, depth + 1);
+      }
       pagetable[i] = 0;
     }
   }

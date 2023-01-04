@@ -132,14 +132,8 @@ found:
   uint64 va = KSTACK((int) (p - proc));
   kpvmmap(p->kernel_pagetable,va,(uint64)pa,PGSIZE,PTE_R | PTE_W);
   p->kstack = va;
-  /*
-      char *pa = kalloc();
-      if(pa == 0)
-        panic("kalloc");
-      uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
-  */
+  //printf("allocproc %p %p\n",va,pa);
+
  /*
   uint64 va = p->kstack;
   uint64 pa = kwalkaddr(va);
@@ -169,6 +163,8 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  uvmunmap(p->kernel_pagetable,p->kstack,1,1);
+  p->kstack = 0;
   if(p->kernel_pagetable) {
     kpwalkfree(p->kernel_pagetable,1);
   }
@@ -506,7 +502,7 @@ scheduler(void)
         kpvminithart(p->kernel_pagetable);
 
         swtch(&c->context, &p->context);
-
+        kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
@@ -517,7 +513,7 @@ scheduler(void)
     }
 #if !defined (LAB_FS)
     if(found == 0) {
-      kvminithart();
+      //kvminithart();
       intr_on();
       asm volatile("wfi");
     }
