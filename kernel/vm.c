@@ -499,6 +499,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  /*
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -516,6 +517,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     srcva = va0 + PGSIZE;
   }
   return 0;
+  */
+  return copyin_new(pagetable,dst,srcva,len);
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -525,6 +528,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  /*
   uint64 n, va0, pa0;
   int got_null = 0;
 
@@ -558,5 +562,23 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return 0;
   } else {
     return -1;
+  }
+  */
+  return copyinstr_new(pagetable,dst,srcva,max);
+}
+
+void u2kvmcopy(pagetable_t pagetable,pagetable_t kernel_pagetable,uint64 oldsz,uint64 newsz) {
+  pte_t *pte_from, *pte_to;
+  oldsz = PGROUNDUP(oldsz);
+  for (uint64 i = oldsz; i < newsz; i += PGSIZE) {
+    if ((pte_from = walk(pagetable,i,0)) == 0) {
+      panic("u2kvmcopy");
+    }
+    if ((pte_to = walk(kernel_pagetable,i,1)) == 0) {
+      panic("u2kvmcopy");
+    }
+    uint64 pa = PTE2PA(*pte_from);
+    uint flag = (PTE_FLAGS(*pte_from)) & (~PTE_U);
+    *pte_to = PA2PTE(pa) | flag;
   }
 }
