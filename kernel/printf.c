@@ -117,7 +117,16 @@ printf(char *fmt, ...)
 void backtrace(void) {
   printf("backtrace:\n");
   uint64 framepointer = r_fp();
-  printf("%x\n",framepointer);
+  uint64 prev_fp = *(uint64 *)(framepointer - 16);
+  uint64 return_address = *(uint64 *)(framepointer - 8);
+  while (PGROUNDDOWN(return_address) > 0) {
+    printf("%p\n",return_address);
+    return_address = *(uint64 *)(prev_fp - 8);
+    if (PGROUNDDOWN(return_address) <= 0) {
+      break;
+    }
+    prev_fp = *(uint64*)(prev_fp - 16);
+  }
 }
 
 void
