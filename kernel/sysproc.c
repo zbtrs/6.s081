@@ -7,6 +7,8 @@
 #include "spinlock.h"
 #include "proc.h"
 
+extern char alarmtest[];
+
 uint64
 sys_exit(void)
 {
@@ -101,15 +103,13 @@ uint64
 sys_sigalarm(void)
 {
   int ticks;
-  uint64 handleraddr;
   if (argint(0, &ticks) < 0) {
     return -1;
   }
-  if (argaddr(1, &handleraddr) < 0) {
+  if (argaddr(1, (uint64*)&myproc()->handler) < 0) {
     return -1;
   }
   myproc()->ticks = ticks;
-  myproc()->handler = (void *)handleraddr;
 
   return 0;
 }
