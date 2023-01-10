@@ -117,7 +117,9 @@ sys_sigalarm(void)
 uint64
 sys_sigreturn(void)
 {
-
+  struct proc* p = myproc();
+  p->ishandling_interrupt = 0;
+  memmove(p->trapframe,p->alarm_trapframe,sizeof(struct trapframe));
 
   return 0;
 }

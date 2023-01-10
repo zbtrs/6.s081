@@ -99,6 +99,7 @@ struct proc {
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
   struct trapframe *trapframe; // data page for trampoline.S
+  struct trapframe *alarm_trapframe;
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
@@ -106,4 +107,5 @@ struct proc {
   int ticks;                   // Time ticks
   void (*handler)();           // Time ticks handler
   int ticks_interval;          // Between last tick and this tick
+  int ishandling_interrupt;
 };
