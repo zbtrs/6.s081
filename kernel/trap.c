@@ -70,16 +70,19 @@ usertrap(void)
     if (p->killed) {
       exit(-1);
     }
-    //p->trapframe->epc += 4;
+    struct proc* p = myproc();
+    uint64 va = r_stval();
+    if (va > p->sz) {
+      exit(-1);
+    }
     char *mem = kalloc();
     if (mem == 0) {
       printf("OOM!\n");
       exit(-1);
     }
     memset(mem,0,PGSIZE);
-    uint64 va = r_stval();
     va = PGROUNDDOWN(va);
-    if (mappages(myproc()->pagetable,va,PGSIZE,(uint64)mem,PTE_W|PTE_X|PTE_R|PTE_U) != 0) {
+    if (mappages(p->pagetable,va,PGSIZE,(uint64)mem,PTE_W|PTE_X|PTE_R|PTE_U) != 0) {
       kfree(mem);
       printf("Can not map new page\n");
       exit(-1);
