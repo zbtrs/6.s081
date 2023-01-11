@@ -72,7 +72,7 @@ usertrap(void)
     }
     struct proc* p = myproc();
     uint64 va = r_stval();
-    if (va > p->sz) {
+    if (va > p->sz || va < PGROUNDUP(p->trapframe->sp)) {
       exit(-1);
     }
     char *mem = kalloc();
@@ -88,7 +88,7 @@ usertrap(void)
       exit(-1);
     }
 
-    intr_on();
+    //intr_on();
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
