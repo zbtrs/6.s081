@@ -49,11 +49,10 @@ sys_sbrk(void)
   struct proc* p = myproc();
   addr = p->sz;
   if (addr + n >= MAXVA) {
-    p->sz = MAXVA;
     return addr;
   }
-  if (addr + n <= 0) {
-    return -1;
+  if (addr + n < 0) {
+    return addr;
   }
   /*
   if(growproc(n) < 0)
