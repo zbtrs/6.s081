@@ -72,7 +72,7 @@ usertrap(void)
     }
     struct proc* p = myproc();
     uint64 va = r_stval();
-    if (va > p->sz || va < PGROUNDUP(p->trapframe->sp)) {
+    if (va >= p->sz || va <= PGROUNDDOWN(p->trapframe->sp)) {
       exit(-1);
     }
     char *mem = kalloc();
