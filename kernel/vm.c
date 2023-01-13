@@ -299,6 +299,37 @@ uvmfree(pagetable_t pagetable, uint64 sz)
   freewalk(pagetable);
 }
 
+int
+cowhandler(pagetable_t pagetable,uint64 va) {
+  char *mem;
+  mem = kalloc();
+  if (mem == 0) {
+    printf("OOM!\n");
+    return -1;
+  }
+  uint64 pa;
+  uint flags;
+  pte_t* pte = walk(pagetable,va,0);
+  if (pte == 0) {
+    kfree(mem);
+    panic("cowhandler: pte equals 0");
+  }
+  if (((*pte) & PTE_V) == 0) {
+    kfree(mem);
+    panic("cowhandler: old address is not valid");
+  }
+  *pte |= PTE_W;
+  flags = PTE_FLAGS(*pte);
+  pa = PTE2PA(*pte);
+  memmove(mem,(char*)pa,PGSIZE);
+  if (mappages(pagetable,va,PGSIZE,(uint64)mem,flags) != 0) {
+    kfree(mem);
+    panic("cowhandler: mappages error!");
+  }
+
+  return 0;
+}
+
 // Given a parent process's page table, copy
 // its memory into a child's page table.
 // Copies both the page table and the
@@ -311,7 +342,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
+  //char *mem;
   /*
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
