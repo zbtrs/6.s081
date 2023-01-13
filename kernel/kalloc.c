@@ -27,15 +27,20 @@ struct {
 
 void 
 kaddref(void *pa) {
-  mem_ref[(uint64)pa - KERNBASE]++;
+  mem_ref[((uint64)pa - KERNBASE) / PGSIZE]++;
 }
 
 void
 kdecref(void *pa) {
-  mem_ref[(uint64)pa - KERNBASE]--;
+  mem_ref[((uint64)pa - KERNBASE) / PGSIZE]--;
   if (mem_ref < 0) {
     panic("kdecref");
   }
+}
+
+int
+kref(void *pa) {
+  return mem_ref[((uint64)pa - KERNBASE) / PGSIZE];
 }
 
 void
@@ -66,6 +71,11 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  kdecref(pa);
+  if (kref(pa) > 0) {
+    return;
+  }
+  
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
@@ -93,5 +103,7 @@ kalloc(void)
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
+  kaddref((void*)r);
+
   return (void*)r;
 }
