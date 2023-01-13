@@ -25,6 +25,11 @@ struct {
   struct run *freelist;
 } kmem;
 
+void
+ksetref(void *pa) {
+  mem_ref[((uint64)pa - KERNBASE) / PGSIZE] = 1;
+}
+
 void 
 kaddref(void *pa) {
   mem_ref[((uint64)pa - KERNBASE) / PGSIZE]++;
@@ -103,7 +108,7 @@ kalloc(void)
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
-  kaddref((void*)r);
+  ksetref((void*)r);
 
   return (void*)r;
 }

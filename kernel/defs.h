@@ -66,6 +66,7 @@ void            kinit(void);
 void            kaddref(void *pa);
 void            kdecref(void *pa);
 int             kref(void *pa);
+void            ksetref(void *pa);
 
 // log.c
 void            initlog(int, struct superblock*);

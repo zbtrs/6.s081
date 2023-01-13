@@ -307,8 +307,13 @@ cowhandler(pagetable_t pagetable,uint64 va) {
   if (pte == 0) {
     panic("cowhandler: pte equals 0");
   }
-  if (((*pte) & PTE_V) == 0) {
+  if (((*pte) & PTE_V) == 0 || ((*pte) & PTE_RSWone) == 0) {
     panic("cowhandler: old address is not valid");
+  }
+  pa = PTE2PA(*pte);
+  if (kref((void*)pa) == 1) {  // modify private pagetable
+    *pte |= PTE_W;
+    return 0;
   }
   char *mem;
   mem = kalloc();
@@ -316,9 +321,9 @@ cowhandler(pagetable_t pagetable,uint64 va) {
     printf("cowhandler: OOM!\n");
     return -1;
   }
+  kdecref((void*)pa);
   *pte |= PTE_W;
   flags = PTE_FLAGS(*pte);
-  pa = PTE2PA(*pte);
   memmove(mem,(char*)pa,PGSIZE);
   if (mappages(pagetable,va,PGSIZE,(uint64)mem,flags) != 0) {
     kfree(mem);
@@ -373,7 +378,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if (mappages(new,i,PGSIZE,pa,flags) != 0) {
       goto err;
     }
-    kaddref(pa);
+    kaddref((void*)pa);
   }
 
  err:
