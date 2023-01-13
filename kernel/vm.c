@@ -301,6 +301,7 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 
 int
 cowhandler(pagetable_t pagetable,uint64 va) {
+  //printf("cowhandler!!!\n");
   uint64 pa;
   uint flags;
   pte_t* pte = walk(pagetable,va,0);
@@ -381,6 +382,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     kaddref((void*)pa);
   }
 
+  return 0;
+
  err:
   uvmunmap(new, 0, i / PGSIZE, 1);
   return -1;
@@ -409,9 +412,14 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
+    pa0 = walkaddr(pagetable, va0);    
     if(pa0 == 0)
       return -1;
+    pte_t *pte = walk(pagetable, va0, 0);
+    if ((*pte & PTE_W) == 0 && (*pte & PTE_RSWone) != 0) {
+      cowhandler(pagetable,va0);
+      pa0 = walkaddr(pagetable, va0);
+    } 
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
