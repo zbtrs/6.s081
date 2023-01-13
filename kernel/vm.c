@@ -156,7 +156,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
-    if(*pte & PTE_V)
+    if(*pte & PTE_V && !(*pte & PTE_RSWone)) // TODO:check RSW of pte
       panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
@@ -301,22 +301,20 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 
 int
 cowhandler(pagetable_t pagetable,uint64 va) {
-  char *mem;
-  mem = kalloc();
-  if (mem == 0) {
-    printf("OOM!\n");
-    return -1;
-  }
   uint64 pa;
   uint flags;
   pte_t* pte = walk(pagetable,va,0);
   if (pte == 0) {
-    kfree(mem);
     panic("cowhandler: pte equals 0");
   }
   if (((*pte) & PTE_V) == 0) {
-    kfree(mem);
     panic("cowhandler: old address is not valid");
+  }
+  char *mem;
+  mem = kalloc();
+  if (mem == 0) {
+    printf("cowhandler: OOM!\n");
+    return -1;
   }
   *pte |= PTE_W;
   flags = PTE_FLAGS(*pte);
@@ -370,6 +368,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     }
     pa = PTE2PA(*pte);
     *pte = (*pte) & (~PTE_W);
+    *pte |= (PTE_RSWone);
     flags = PTE_FLAGS(*pte);
     if (mappages(new,i,PGSIZE,pa,flags) != 0) {
       goto err;
