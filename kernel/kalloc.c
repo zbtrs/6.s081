@@ -14,6 +14,8 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+int mem_ref[40000];
+
 struct run {
   struct run *next;
 };
@@ -22,6 +24,19 @@ struct {
   struct spinlock lock;
   struct run *freelist;
 } kmem;
+
+void 
+kaddref(void *pa) {
+  mem_ref[(uint64)pa - KERNBASE]++;
+}
+
+void
+kdecref(void *pa) {
+  mem_ref[(uint64)pa - KERNBASE]--;
+  if (mem_ref < 0) {
+    panic("kdecref");
+  }
+}
 
 void
 kinit()
