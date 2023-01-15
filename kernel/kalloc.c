@@ -23,6 +23,7 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
+  int cnt;
 } kmem;
 
 void
@@ -49,6 +50,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  kmem.cnt = 0;
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -76,10 +78,9 @@ kfree(void *pa)
     panic("kfree");
 
   kdecref(pa);
-  if (kref(pa) > 0) {
+  if (kref(pa) != 0) {
     return;
   }
-  
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
@@ -88,6 +89,7 @@ kfree(void *pa)
   acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
+  kmem.cnt++;
   release(&kmem.lock);
 }
 
@@ -101,13 +103,15 @@ kalloc(void)
 
   acquire(&kmem.lock);
   r = kmem.freelist;
-  if(r)
+  if(r) {
     kmem.freelist = r->next;
+    kmem.cnt--;
+    ksetref((void*)r);
+  }
   release(&kmem.lock);
 
   if(r) {
     memset((char*)r, 5, PGSIZE); // fill with junk
-    ksetref((void*)r);
   }
 
   return (void*)r;
