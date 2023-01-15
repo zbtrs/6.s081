@@ -14,8 +14,6 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
-int mem_ref[(PHYSTOP - KERNBASE) / PGSIZE];
-
 struct run {
   struct run *next;
 };
@@ -24,26 +22,27 @@ struct {
   struct spinlock lock;
   struct run *freelist;
   int cnt;
+  int mem_ref[(PHYSTOP - KERNBASE) / PGSIZE];
 } kmem;
 
 void
 ksetref(void *pa) {
-  mem_ref[((uint64)pa - KERNBASE) / PGSIZE] = 1;
+  kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE] = 1;
 }
 
 void 
 kaddref(void *pa) {
-  mem_ref[((uint64)pa - KERNBASE) / PGSIZE]++;
+  kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE]++;
 }
 
 void
 kdecref(void *pa) {
-  mem_ref[((uint64)pa - KERNBASE) / PGSIZE]--;
+  kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE]--;
 }
 
 int
 kref(void *pa) {
-  return mem_ref[((uint64)pa - KERNBASE) / PGSIZE];
+  return kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE];
 }
 
 void
@@ -60,7 +59,7 @@ freerange(void *pa_start, void *pa_end)
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
-    ksetref((void*)p);
+    ksetref((void*)p);    
     kfree(p);
   }
 }
@@ -76,9 +75,11 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
+  acquire(&kmem.lock);
 
   kdecref(pa);
   if (kref(pa) != 0) {
+    release(&kmem.lock);
     return;
   }
   // Fill with junk to catch dangling refs.
@@ -86,7 +87,6 @@ kfree(void *pa)
 
   r = (struct run*)pa;
 
-  acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
   kmem.cnt++;

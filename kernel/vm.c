@@ -156,7 +156,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
-    if(*pte & PTE_V && !(*pte & PTE_RSWone)) // TODO:check RSW of pte
+    if(*pte & PTE_V && !(*pte & PTE_RSWone)) 
       panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
@@ -284,6 +284,7 @@ freewalk(pagetable_t pagetable)
       pagetable[i] = 0;
     } else if(pte & PTE_V){
       panic("freewalk: leaf");
+      //continue;
     }
   }
   kfree((void*)pagetable);
@@ -302,6 +303,7 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 int
 cowhandler(pagetable_t pagetable,uint64 va) {
   //printf("cowhandler!!!\n");
+  va = PGROUNDDOWN(va);
   uint64 pa;
   uint flags;
   pte_t* pte = walk(pagetable,va,0);

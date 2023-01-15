@@ -73,7 +73,7 @@ usertrap(void)
     }
     struct proc* p = myproc();
     if (cowhandler(p->pagetable,r_stval()) != 0) {
-      p->killed = 1;
+      exit(-1);
     }
 
   } else {
