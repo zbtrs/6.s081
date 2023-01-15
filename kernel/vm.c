@@ -311,7 +311,8 @@ cowhandler(pagetable_t pagetable,uint64 va) {
     panic("cowhandler: pte equals 0");
   }
   if (((*pte) & PTE_V) == 0 || ((*pte) & PTE_RSWone) == 0) {
-    panic("cowhandler: old address is not valid");
+    //panic("cowhandler: old address is not valid");
+    return -1;
   }
   pa = PTE2PA(*pte);
   if (kref((void*)pa) == 1) {  // modify private pagetable

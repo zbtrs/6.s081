@@ -78,7 +78,7 @@ kfree(void *pa)
   acquire(&kmem.lock);
 
   kdecref(pa);
-  if (kref(pa) != 0) {
+  if (kref(pa) > 0) {
     release(&kmem.lock);
     return;
   }
