@@ -14,6 +14,11 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+struct ref {
+  struct spinlock lock;
+  int mem_ref[PHYSTOP / PGSIZE];
+} ref;
+
 struct run {
   struct run *next;
 };
@@ -22,33 +27,33 @@ struct {
   struct spinlock lock;
   struct run *freelist;
   int cnt;
-  int mem_ref[(PHYSTOP - KERNBASE) / PGSIZE];
 } kmem;
 
 void
 ksetref(void *pa) {
-  kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE] = 1;
+  ref.mem_ref[(uint64)pa / PGSIZE] = 1;
 }
 
 void 
 kaddref(void *pa) {
-  kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE]++;
+  ref.mem_ref[(uint64)pa / PGSIZE]++;
 }
 
 void
 kdecref(void *pa) {
-  kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE]--;
+  ref.mem_ref[(uint64)pa / PGSIZE]--;
 }
 
 int
 kref(void *pa) {
-  return kmem.mem_ref[((uint64)pa - KERNBASE) / PGSIZE];
+  return ref.mem_ref[(uint64)pa / PGSIZE];
 }
 
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  initlock(&ref.lock,"ref");
   kmem.cnt = 0;
   freerange(end, (void*)PHYSTOP);
 }
@@ -75,22 +80,25 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
-  acquire(&kmem.lock);
 
+  acquire(&ref.lock);
   kdecref(pa);
-  if (kref(pa) > 0) {
+  if (kref(pa) == 0) {
+    release(&ref.lock);
+
+    // Fill with junk to catch dangling refs.
+    memset(pa, 1, PGSIZE);
+
+    r = (struct run*)pa;
+
+    acquire(&kmem.lock);
+    r->next = kmem.freelist;
+    kmem.freelist = r;
+    kmem.cnt++;
     release(&kmem.lock);
-    return;
+  } else {
+    release(&ref.lock);
   }
-  // Fill with junk to catch dangling refs.
-  memset(pa, 1, PGSIZE);
-
-  r = (struct run*)pa;
-
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  kmem.cnt++;
-  release(&kmem.lock);
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -106,7 +114,9 @@ kalloc(void)
   if(r) {
     kmem.freelist = r->next;
     kmem.cnt--;
+    acquire(&ref.lock);
     ksetref((void*)r);
+    release(&ref.lock);
   }
   release(&kmem.lock);
 

@@ -325,10 +325,10 @@ cowhandler(pagetable_t pagetable,uint64 va) {
     printf("cowhandler: OOM!\n");
     return -1;
   }
-  kdecref((void*)pa);
   *pte |= PTE_W;
   flags = PTE_FLAGS(*pte);
   memmove(mem,(char*)pa,PGSIZE);
+  kfree((void*)pa);
   if (mappages(pagetable,va,PGSIZE,(uint64)mem,flags) != 0) {
     kfree(mem);
     panic("cowhandler: mappages error!");
