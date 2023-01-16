@@ -96,9 +96,9 @@ thread_create(void (*func)())
   }
   t->state = RUNNABLE;
   // YOUR CODE HERE
-  //memset(t->stack,0,sizeof(t->stack));
+  memset(t->stack,0,sizeof(t->stack));
   t->context.ra = (uint64)func;
-  t->context.sp = (uint64)t->stack;
+  t->context.sp = (uint64)t->stack + STACK_SIZE;
 }
 
 void 
