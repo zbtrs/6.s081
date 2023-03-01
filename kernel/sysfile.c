@@ -140,10 +140,21 @@ sys_symlink(void) {
   iupdate(ip);
   iunlock(ip);
 
+  struct inode *new_ip;
+  if ((new_ip = ialloc(ip->dev,T_SYMLINK)) == 0)
+    return -1;
+  ilock(new_ip);
+  new_ip->major = ip->major;
+  new_ip->minor = ip->minor;
+  new_ip->nlink = 1;
+  new_ip->linkedinode = ip;
+  iupdate(new_ip);
+  iunlockput(new_ip);
+
   if((dp = nameiparent(new,name)) == 0)
     goto bad2;
   ilock(dp);
-  if (dp->dev != ip->dev || manylink(dp,name,ip->inum) < 0) {
+  if (dirlink(dp,name,new_ip->inum) < 0) {
     iunlockput(dp);
     goto bad2;
   }
