@@ -79,12 +79,14 @@ testsymlink(void)
   if(st.type != T_SYMLINK)
     fail("b isn't a symlink");
 
+  printf("111\n");
   fd2 = open("/testsymlink/b", O_RDWR);
   if(fd2 < 0)
     fail("failed to open b");
   read(fd2, &c, 1);
   if (c != 'a')
     fail("failed to read bytes from b");
+  printf("222\n");
 
   unlink("/testsymlink/a");
   if(open("/testsymlink/b", O_RDWR) >= 0)

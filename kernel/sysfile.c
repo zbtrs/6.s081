@@ -16,6 +16,7 @@
 #include "file.h"
 #include "fcntl.h"
 
+
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
@@ -123,6 +124,7 @@ sys_symlink(void) {
   if (argstr(0, old, MAXPATH) < 0 || argstr(1,new,MAXPATH) < 0) 
     return -1;
 
+  //if old is not existing
   begin_op();
   if ((ip = namei(old)) == 0) {
     end_op();
@@ -138,28 +140,31 @@ sys_symlink(void) {
 
   ip->nlink++;
   iupdate(ip);
-  iunlock(ip);
-
-  struct inode *new_ip;
-  if ((new_ip = ialloc(ip->dev,T_SYMLINK)) == 0)
-    return -1;
-  ilock(new_ip);
-  new_ip->major = ip->major;
-  new_ip->minor = ip->minor;
-  new_ip->nlink = 1;
-  new_ip->linkedinode = ip;
-  iupdate(new_ip);
-  iunlockput(new_ip);
+  iunlockput(ip);
 
   if((dp = nameiparent(new,name)) == 0)
     goto bad2;
   ilock(dp);
+
+  struct inode *new_ip;
+  if ((new_ip = ialloc(ip->dev,T_SYMLINK)) == 0)
+  {
+    end_op();
+    return -1;
+  }
+  ilock(new_ip);
+  new_ip->major = ip->major;
+  new_ip->minor = ip->minor;
+  new_ip->nlink = 1;
+  strncpy(new_ip->linkedaddr,old,MAXPATH);
+  iupdate(new_ip);
+  iunlockput(new_ip);
+
   if (dirlink(dp,name,new_ip->inum) < 0) {
     iunlockput(dp);
     goto bad2;
   }
   iunlockput(dp);
-  iput(ip);
 
   end_op();
   return 0;
@@ -394,8 +399,11 @@ sys_open(void)
   if(ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
     // follow;
     int cnt = 1;
+    struct inode *n_ip;
     while (cnt <= 11) {
-      ip = ip->linkedinode;
+      n_ip = namei(ip->linkedaddr);
+      iunlockput(ip);
+      ip = n_ip;
       if (ip -> type != T_SYMLINK)
         break;
       cnt++;
@@ -418,7 +426,7 @@ sys_open(void)
     itrunc(ip);
   }
 
-  iunlock(ip);
+  iunlockput(ip);
   end_op();
 
   return fd;
