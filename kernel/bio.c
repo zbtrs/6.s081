@@ -85,8 +85,26 @@ bget(uint dev, uint blockno)
 
   // Not cached.
   // Recycle the least recently used (LRU) unused buffer.
-  for(b = bcache.head[bn].prev; b != &bcache.head[bn]; b = b->prev){
-    if(b->refcnt == 0) {
+
+  struct buf *tmp;
+  tmp = 0;
+
+  for(b = bcache.head[bn].next; b != &bcache.head[bn]; b = b->next){
+    if(b->refcnt == 0 && (tmp == 0 || b->timestamp > tmp->timestamp)) {
+      tmp = b;
+    }
+  }
+
+  if (tmp != 0) {
+    tmp->dev = dev;
+    tmp->blockno = blockno;
+    tmp->valid = 0;
+    tmp->refcnt = 1;
+    release(&bcache.lock[bn]);
+    acquiresleep(&tmp->lock);
+    return tmp;
+  }
+    /*
       b->dev = dev;
       b->blockno = blockno;
       b->valid = 0;
@@ -95,9 +113,44 @@ bget(uint dev, uint blockno)
       //release(&bcache.biglock);
       acquiresleep(&b->lock);
       return b;
+    */
+  release(&bcache.lock[bn]);
+  acquire(&bcache.biglock);
+  // payattention: release!
+  for (int i = 1; i < bucketN; i++) {
+    int anobucket = (bn + i) % bucketN;
+    acquire(&bcache.lock[anobucket]);
+    for (b = bcache.head[anobucket].next; b != &bcache.head[anobucket]; b = b->next) {
+      if (b->refcnt == 0 && (tmp == 0 || b->timestamp > tmp->timestamp)) {
+        tmp = b;
+      }
     }
-  }
 
+    if (tmp != 0) {
+      // release locks
+      tmp->prev->next = tmp->next;
+      tmp->next->prev = tmp->prev;
+      tmp->dev = dev;
+      tmp->blockno = blockno;
+      tmp->valid = 0;
+      tmp->refcnt = 1;
+      release(&bcache.lock[anobucket]);
+      break;
+    }
+    release(&bcache.lock[anobucket]);
+  }
+  if (tmp != 0) {
+    release(&bcache.biglock);
+    acquire(&bcache.lock[bn]);
+    tmp->prev = &bcache.head[bn];
+    tmp->next = bcache.head[bn].next;
+    bcache.head[bn].next->prev = tmp;
+    bcache.head[bn].next = tmp;
+    acquiresleep(&tmp->lock);
+    release(&bcache.lock[bn]);
+    return tmp;
+  }
+  
   panic("bget: no buffers");
 }
 
