@@ -408,6 +408,12 @@ sys_open(void)
         break;
       cnt++;
     }
+    if (cnt >= 11) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+
   }
   
 
@@ -426,7 +432,7 @@ sys_open(void)
     itrunc(ip);
   }
 
-  iunlockput(ip);
+  iunlock(ip);
   end_op();
 
   return fd;
