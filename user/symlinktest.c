@@ -89,33 +89,42 @@ testsymlink(void)
   printf("222\n");
 
   unlink("/testsymlink/a");
+  //printf("!!!\n");
   if(open("/testsymlink/b", O_RDWR) >= 0)
     fail("Should not be able to open b after deleting a");
+  printf("333\n");
 
   r = symlink("/testsymlink/b", "/testsymlink/a");
   if(r < 0)
     fail("symlink a -> b failed");
+  printf("444\n");
 
   r = open("/testsymlink/b", O_RDWR);
   if(r >= 0)
     fail("Should not be able to open b (cycle b->a->b->..)\n");
   
   r = symlink("/testsymlink/nonexistent", "/testsymlink/c");
+  printf("555\n");
   if(r != 0)
     fail("Symlinking to nonexistent file should succeed\n");
 
   r = symlink("/testsymlink/2", "/testsymlink/1");
   if(r) fail("Failed to link 1->2");
+  printf("666\n");
   r = symlink("/testsymlink/3", "/testsymlink/2");
   if(r) fail("Failed to link 2->3");
+  printf("777\n");
   r = symlink("/testsymlink/4", "/testsymlink/3");
   if(r) fail("Failed to link 3->4");
+  
+  printf("888\n");
 
   close(fd1);
   close(fd2);
-
+  printf("999\n");
   fd1 = open("/testsymlink/4", O_CREATE | O_RDWR);
   if(fd1<0) fail("Failed to create 4\n");
+  printf("!!!\n");
   fd2 = open("/testsymlink/1", O_RDWR);
   if(fd2<0) fail("Failed to open 1\n");
 

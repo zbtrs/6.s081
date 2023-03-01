@@ -126,9 +126,16 @@ sys_symlink(void) {
 
   //if old is not existing
   begin_op();
+  ip = namei(old);
+  /*
   if ((ip = namei(old)) == 0) {
     end_op();
     return -1;
+  }
+  */
+  if (ip == 0) {
+    end_op();
+    return 0;
   }
 
   ilock(ip);
@@ -402,7 +409,13 @@ sys_open(void)
     struct inode *n_ip;
     while (cnt <= 11) {
       n_ip = namei(ip->linkedaddr);
+      if (n_ip == 0) {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
       iunlockput(ip);
+      ilock(n_ip);
       ip = n_ip;
       if (ip -> type != T_SYMLINK)
         break;
