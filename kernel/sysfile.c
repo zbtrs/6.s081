@@ -133,35 +133,54 @@ sys_symlink(void) {
     return -1;
   }
   */
-  if (ip == 0) {
-    end_op();
-    return 0;
-  }
 
-  ilock(ip);
-  if (ip->type == T_DIR) {
+  if (ip != 0) {
+    ilock(ip);
+    if (ip->type == T_DIR) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+
+    ip->nlink++;
+    iupdate(ip);
     iunlockput(ip);
-    end_op();
-    return -1;
   }
-
-  ip->nlink++;
-  iupdate(ip);
-  iunlockput(ip);
 
   if((dp = nameiparent(new,name)) == 0)
-    goto bad2;
+  {
+    if (ip != 0)
+     goto bad2;
+    else 
+    {
+      end_op();
+      return -1;
+    }
+  }
   ilock(dp);
 
   struct inode *new_ip;
-  if ((new_ip = ialloc(ip->dev,T_SYMLINK)) == 0)
-  {
-    end_op();
-    return -1;
+  if (ip != 0) {
+    if ((new_ip = ialloc(ip->dev,T_SYMLINK)) == 0)
+    {
+      end_op();
+      return -1;
+    }
+  } else {
+    if ((new_ip = ialloc(dp->dev,T_SYMLINK)) == 0)
+    {
+      end_op();
+      return -1;
+    }
   }
   ilock(new_ip);
-  new_ip->major = ip->major;
-  new_ip->minor = ip->minor;
+  if (ip != 0) {
+    new_ip->major = ip->major;
+    new_ip->minor = ip->minor;
+  }
+  else {
+    new_ip->major = new_ip->minor = 0;
+  }
   new_ip->nlink = 1;
   strncpy(new_ip->linkedaddr,old,MAXPATH);
   iupdate(new_ip);
@@ -169,7 +188,12 @@ sys_symlink(void) {
 
   if (dirlink(dp,name,new_ip->inum) < 0) {
     iunlockput(dp);
-    goto bad2;
+    if (ip != 0) {
+      goto bad2;
+    } else {
+      end_op();
+      return -1;
+    }
   }
   iunlockput(dp);
 
