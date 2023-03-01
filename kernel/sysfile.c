@@ -391,6 +391,18 @@ sys_open(void)
     return -1;
   }
 
+  if(ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
+    // follow;
+    int cnt = 1;
+    while (cnt <= 11) {
+      ip = ip->linkedinode;
+      if (ip -> type != T_SYMLINK)
+        break;
+      cnt++;
+    }
+  }
+  
+
   if(ip->type == T_DEVICE){
     f->type = FD_DEVICE;
     f->major = ip->major;
