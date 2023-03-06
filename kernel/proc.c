@@ -134,6 +134,17 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  for (int i = 0; i < vma_size; i++) {
+    p->vmas[i].addr = 0;
+    p->vmas[i].f = 0;
+    p->vmas[i].fd = 0;
+    p->vmas[i].flags = 0;
+    p->vmas[i].len = 0;
+    p->vmas[i].offset = 0;
+    p->vmas[i].prot = 0;
+    p->vmas[i].use = 0;
+  }
+
   return p;
 }
 
@@ -157,6 +168,18 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  for (int i = 0; i < vma_size; i++) {
+    fileclose(p->vmas[i].f);
+    p->vmas[i].addr = 0;
+    p->vmas[i].f = 0;
+    p->vmas[i].fd = 0;
+    p->vmas[i].flags = 0;
+    p->vmas[i].len = 0;
+    p->vmas[i].offset = 0;
+    p->vmas[i].prot = 0;
+    p->vmas[i].use = 0;
+  }
+
 }
 
 // Create a user page table for a given process,
