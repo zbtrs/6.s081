@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fcntl.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -27,6 +28,50 @@ void
 trapinithart(void)
 {
   w_stvec((uint64)kernelvec);
+}
+
+void
+mmaphandler(uint64 va)
+{
+  struct proc* p = myproc();
+  for (int i = 0; i < vma_size; i++) {
+    if (p->vmas[i].use) {
+      if (va >= p->vmas[i].addr && va <= p->vmas[i].addr + (uint)p->vmas[i].len) {
+        // find correct vma,cal offset
+        uint endaddr = p->vmas[i].addr + (uint)p->vmas[i].len;
+        char *mem = kalloc();
+        int perm = 0;
+        if (p->vmas[i].prot & PROT_READ) {
+          perm |= PTE_R;
+        }
+        if (p->vmas[i].prot & PROT_WRITE) {
+          perm |= PTE_W;
+        }
+        if (mem == 0) {
+          panic("mmaphandler: kalloc error!\n");
+        }
+        memset(mem,0,PGSIZE);
+        if (mappages(p->pagetable,va,PGSIZE,(uint64)mem,perm) != 0) {
+          kfree(mem);
+          panic("mmaphandler: mappages error!\n");
+        }
+        struct inode* fi = p->vmas[i].f->ip;
+        idup(fi);
+        ilock(fi);
+        if (va + PGSIZE <= 1 + endaddr) {
+          if (PGSIZE != readi(fi,1,va,va - p->vmas[i].addr,PGSIZE)) {
+            panic("mmaphandler: readi\n");
+          }
+        } else {
+          int len = endaddr - va + 1;
+          if (len != readi(fi,1,va,va - p->vmas[i].addr,len)) {
+            panic("mmaphandler: readi\n");
+          }
+        }
+        iunlockput(fi);
+      }
+    }
+  }
 }
 
 //
@@ -68,9 +113,16 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
-    printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    p->killed = 1;
+    // TODO: do mmaphandler
+    uint64 scause = r_scause();
+    uint64 va = r_stval();
+    if (scause == 13) {
+      mmaphandler(va);
+    } else {
+      printf("usertrap(): unexpected scause %p pid=%d\n", scause, p->pid);
+      printf("            sepc=%p stval=%p\n", r_sepc(), va);
+      p->killed = 1;
+    }
   }
 
   if(p->killed)
