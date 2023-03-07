@@ -43,7 +43,7 @@ mmaphandler(uint64 va)
         // find correct vma,cal offset
         uint endaddr = p->vmas[i].addr + (uint)p->vmas[i].len;
         char *mem = kalloc();
-        int perm = 0;
+        int perm = PTE_U;
         if (p->vmas[i].prot & PROT_READ) {
           perm |= PTE_R;
         }
@@ -62,12 +62,21 @@ mmaphandler(uint64 va)
         idup(fi);
         ilock(fi);
         if (va + PGSIZE <= 1 + endaddr) {
-          if (PGSIZE != readi(fi,1,va,va - p->vmas[i].addr,PGSIZE)) {
+          int off = va - p->vmas[i].addr;
+          int len = PGSIZE;
+          if (off + len > fi->size) {
+            len = fi->size - off;
+          }
+          if (len != readi(fi,1,va,off,len)) {
             panic("mmaphandler: readi\n");
           }
         } else {
           int len = endaddr - va + 1;
-          if (len != readi(fi,1,va,va - p->vmas[i].addr,len)) {
+          int off = va - p->vmas[i].addr;
+          if (off + len > fi->size) {
+            len = fi->size - off;
+          }
+          if (len != readi(fi,1,va,off,len)) {
             panic("mmaphandler: readi\n");
           }
         }
