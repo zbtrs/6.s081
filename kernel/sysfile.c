@@ -538,5 +538,34 @@ sys_mmap(void)
 uint64
 sys_munmap(void)
 {
-  return 0;
+  uint64 addr;
+  uint length;
+  if (argaddr(0,&addr) < 0) {
+    return -1;
+  }
+  if (argint(1,(int*)&length) < 0) {
+    return -1;
+  }
+  struct proc* p = myproc();
+  for (int i = 0; i < vma_size; i++) {
+    if (p->vmas[i].use == 1 && addr >= p->vmas[i].addr && addr < p->vmas[i].addr + p->vmas[i].len)
+    {
+      // find
+      if (addr + length > p->vmas[i].addr + p->vmas[i].len) {
+        return -1;
+      }
+      if (p->vmas[i].flags & MAP_SHARED) {
+        filewrite(p->vmas[i].f,addr,length);
+      }
+      uvmunmap(p->pagetable,addr,length / PGSIZE,0);
+      if (addr == p->vmas[i].addr && length == p->vmas[i].len) {
+        // munmap all
+        p->vmas[i].use = 0;
+        fileclose(p->vmas[i].f);
+      }
+      return 0;
+    }
+  }
+
+  return -1;
 }
