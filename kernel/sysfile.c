@@ -562,7 +562,7 @@ sys_munmap(void)
       if (p->vmas[i].flags & MAP_SHARED) {
         filewrite(p->vmas[i].f,addr,length);
       }
-      uvmunmap(p->pagetable,addr,length / PGSIZE,0);
+      uvmunmap(p->pagetable,addr,length / PGSIZE,1);
       if (addr == p->vmas[i].addr && length == p->vmas[i].len) {
         // munmap all
         p->vmas[i].use = 0;

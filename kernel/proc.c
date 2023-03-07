@@ -377,6 +377,12 @@ exit(int status)
       p->ofile[fd] = 0;
     }
   }
+  for (int i = 0; i < vma_size; i++)
+    if (p->vmas[i].use) {
+      p->vmas[i].use = 0;
+      uvmunmap(p->pagetable,p->vmas[i].addr,p->vmas[i].len / PGSIZE,1);
+      fileclose(p->vmas[i].f);
+    }
 
   begin_op();
   iput(p->cwd);
