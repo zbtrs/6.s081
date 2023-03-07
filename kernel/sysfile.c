@@ -508,9 +508,14 @@ sys_mmap(void)
   if ((prot & PROT_READ) && !(f->readable)) {
     return -1;
   }
+  if (!(f->writable) && (prot & PROT_WRITE) && (flags & MAP_SHARED)) {
+    return -1;
+  }
+  /*
   if ((prot & PROT_WRITE) && !(f->writable)) {
     return -1;
   }
+  */
   int pos = -1;
   for (int i = 0; i < vma_size; i++) {
     if (p->vmas[i].use == 0) {
