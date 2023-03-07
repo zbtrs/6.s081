@@ -39,7 +39,7 @@ mmaphandler(uint64 va)
   struct proc* p = myproc();
   for (int i = 0; i < vma_size; i++) {
     if (p->vmas[i].use) {
-      if (va >= p->vmas[i].addr && va <= p->vmas[i].addr + (uint)p->vmas[i].len) {
+      if (va >= p->vmas[i].addr && va + 1 <= p->vmas[i].addr + (uint)p->vmas[i].len) {
         // find correct vma,cal offset
         uint endaddr = p->vmas[i].addr + (uint)p->vmas[i].len;
         char *mem = kalloc();
